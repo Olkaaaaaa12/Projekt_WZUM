@@ -55,42 +55,19 @@ df_temp["hour"] = df_temp.index.hour
 maskday = (df_temp["day_of_week"] < 5) & (df_temp["hour"] > 3) & (df_temp["hour"] < 17)
 df_temp = df_temp.loc[maskday]
 
-mask = (df_temp.index < '2020-10-30')
-df_train = df_temp.loc[mask]
-
-maskTest = (df_temp.index >= '2020-10-30')
-df_test = df_temp.loc[maskTest]
+df_train = df_temp
 
 X_train = df_train[['tempMid', 'tempWall', 'tempWindow', 'target', 'valve']].to_numpy()[1:-1]
 y_train = df_train['gt'].to_numpy()[1:-1]
-X_test = df_test[['tempMid', 'tempWall', 'tempWindow', 'target', 'valve']].to_numpy()[1:-1]
-y_test = df_test['gt'].to_numpy()[1:-1]
 
 reg = ensemble.RandomForestRegressor(n_estimators=120)
 reg.fit(X_train, y_train)
 pickle.dump(reg, open('./models/reg.p', 'wb'))
 
-y_pred = reg.predict(X_test)
-print(metrics.mean_absolute_error(y_test, y_pred))
-
 X_trainV = df_train[['tempMid', 'tempWall', 'tempWindow', 'target', 'valve']].to_numpy()[1:-1]
 y_trainV = df_train['gtValve'].to_numpy()[1:-1]
-X_testV = df_test[['tempMid', 'tempWall', 'tempWindow', 'target', 'valve']].to_numpy()[1:-1]
-y_testV = df_test['gtValve'].to_numpy()[1:-1]
 
 regValve = ensemble.GradientBoostingRegressor(n_estimators=80)
 regValve.fit(X_trainV, y_trainV)
 pickle.dump(regValve, open('./models/regValve.p', 'wb'))
 
-y_predValve = regValve.predict(X_testV)
-print(metrics.mean_absolute_error(y_testV, y_predValve))
-
-df_test = df_test.iloc[1:-1, :]
-df_test['pred'] = y_pred.tolist()
-df_test['predValve'] = y_predValve.tolist()
-
-temp = df_test.drop(columns=['valve', 'tempWall','tempWindow', 'target', 'day_of_week', 'hour', 'predValve', 'gtValve'])
-valve = df_test.drop(columns=['tempMid','tempWall','tempWindow', 'target', 'day_of_week', 'hour', 'pred', 'gt'])
-temp.plot()
-valve.plot()
-plt.show()

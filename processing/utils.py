@@ -47,15 +47,7 @@ def perform_processing(
 
     df_temp1 = pd.concat([df_temp1, df_temp2, df_temp3, target_temperature, valve_level])
 
-    t = pd.to_datetime(list(df_temp1.index)[-1])
-    t2 = t - pd.DateOffset(minutes=5)
-    mask = (df_temp1.index > t2)
-    sch = df_temp1.loc[mask]
-    m = sch.mean().fillna(method='ffill')
-
     df_temp = df_temp1.resample(pd.Timedelta(minutes=15)).mean().fillna(method='ffill')
-    t = pd.to_datetime(list(df_temp.index)[-1]) + pd.DateOffset(minutes=15)
-    df_temp.loc[t, :] = m
 
     df_temp['gt'] = df_temp['tempMid'].shift(-1, fill_value=20)
     df_temp['gtValve'] = df_temp['valve'].shift(-1, fill_value=0)
@@ -65,18 +57,15 @@ def perform_processing(
     maskday = (df_temp["day_of_week"] < 5) & (df_temp["hour"] > 3) & (df_temp["hour"] < 17)
     df_temp = df_temp.loc[maskday]
 
-    mask = (df_temp.index >= '2020-10-23')
-    df_temp = df_temp.loc[mask]
-
     X_train = df_temp[['tempMid', 'tempWall', 'tempWindow', 'target', 'valve']].to_numpy()[1:-1]
     y_train = df_temp['gt'].to_numpy()[1:-1]
 
-    X_test = df_temp[['tempMid', 'tempWall', 'tempWindow', 'target', 'valve']].to_numpy()[-2:]
+    X_test = [df_temp[['tempMid', 'tempWall', 'tempWindow', 'target', 'valve']].to_numpy()[-1]]
 
     X_trainV = df_temp[['tempMid', 'tempWall', 'tempWindow', 'target', 'valve']].to_numpy()[1:-1]
     y_trainV = df_temp['gtValve'].to_numpy()[1:-1]
 
-    X_testV = df_temp[['tempMid', 'tempWall', 'tempWindow', 'target', 'valve']].to_numpy()[-2:]
+    X_testV = [df_temp[['tempMid', 'tempWall', 'tempWindow', 'target', 'valve']].to_numpy()[-1]]
 
     reg.set_params(n_estimators=240, warm_start=True)
     reg.fit(X_train, y_train)
@@ -88,4 +77,4 @@ def perform_processing(
 
     y_predV = regValve.predict(X_testV)
 
-    return y_pred[1], y_predV[1]
+    return y_pred, y_predV
